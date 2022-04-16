@@ -3,14 +3,22 @@ const World = Matter.World;
 const Bodies = Matter.Bodies;
 const Constraint = Matter.Constraint;
 
-var engine, world, backgroundImg,boat;
+var engine, world, backgroundImg;
 var canvas, angle, tower, ground, cannon;
 var balls = [];
 var boats = [];
 
+var score = 0;
+// variavéis para adicionar animação junto com os dados json
+ var boatAnimation=[]
+ var boatData
+ var boatSheets
 function preload() {
   backgroundImg = loadImage("./assets/background.gif");
   towerImage = loadImage("./assets/tower.png");
+
+  boatData=loadJSON("./assets/boat/boat.json");
+  boatSheets=loadImage("./assets/boat/boat.png");
 }
 
 function setup() {
@@ -20,6 +28,7 @@ function setup() {
   angleMode(DEGREES)
   angle = 15
 
+
   ground = Bodies.rectangle(0, height - 1, width * 2, 1, { isStatic: true });
   World.add(world, ground);
 
@@ -27,7 +36,16 @@ function setup() {
   World.add(world, tower);
 
   cannon = new Cannon(180, 110, 130, 100, angle);
- 
+
+  var boatFrames=boatData.frames;
+  //  repetir as animações repetidamente
+
+  for(var i=0;i<boatFrames.length;i++){
+    var pos=boatFrames[i].position
+    var img=boatSheets.get(pos.x,pos.y,pos.w,pos.h)
+    boatAnimation.push(img)
+
+  }
 }
 
 function draw() {
@@ -36,16 +54,19 @@ function draw() {
 
   Engine.update(engine);
 
- 
-  rect(ground.position.x, ground.position.y, width * 2, 1);
-  
-
   push();
-  imageMode(CENTER);
-  image(towerImage,tower.position.x, tower.position.y, 160, 310);
+  translate(ground.position.x, ground.position.y);
+  fill("brown");
+  rectMode(CENTER);
+  rect(0, 0, width * 2, 1);
   pop();
 
-
+  push();
+  translate(tower.position.x, tower.position.y);
+  rotate(tower.angle);
+  imageMode(CENTER);
+  image(towerImage, 0, 0, 160, 310);
+  pop();
 
   showBoats();
 
@@ -55,6 +76,23 @@ function draw() {
   }
 
   cannon.display();
+
+
+}
+
+function collisionWithBoat(index) {
+  for (var i = 0; i < boats.length; i++) {
+    if (balls[index] !== undefined && boats[i] !== undefined) {
+      var collision = Matter.SAT.collides(balls[index].body, boats[i].body);
+
+      if (collision.collided) {
+        boats[i].remove(i);
+
+        Matter.World.remove(world, balls[index].body);
+        delete balls[index];
+      }
+    }
+  }
 }
 
 function keyPressed() {
@@ -69,6 +107,9 @@ function keyPressed() {
 function showCannonBalls(ball, index) {
   if (ball) {
     ball.display();
+    if (ball.body.position.x >= width || ball.body.position.y >= height - 50) {
+      ball.remove(index);
+    }
   }
 }
 
@@ -80,7 +121,7 @@ function showBoats() {
     ) {
       var positions = [-40, -60, -70, -20];
       var position = random(positions);
-      var boat = new Boat(width, height - 100, 170, 170, position);
+      var boat = new Boat(width, height - 100, 170, 170, position,boatAnimation);
 
       boats.push(boat);
     }
@@ -93,10 +134,13 @@ function showBoats() {
         });
 
         boats[i].display();
-      } 
+        boats[i].animate();
+      } else {
+        boats[i];
+      }
     }
   } else {
-    var boat = new Boat(width, height - 60, 170, 170, -60);
+    var boat = new Boat(width, height - 60, 170, 170, -60,boatAnimation);
     boats.push(boat);
   }
 }
@@ -105,20 +149,4 @@ function keyReleased() {
   if (keyCode === DOWN_ARROW) {
     balls[balls.length - 1].shoot();
   }
-}
-//função para detectar colisão do barco com as bolonhesas 
-function collisionWithBoat(index){
-  for(var i=0;i<boats.length;i++){
-    if(balls[index]!== undefined && boats[index]!== undefined){
-    var collision = Matter.SAT.collides(balls[index].body,boats[index].body)
-   if(collision.collided){
-     boats[i].remove(i);
-
-     Matter.World.remove(world,balls[index].body);
-     delete balls[index];
-   }
-  }
-
-  }
-  
 }
